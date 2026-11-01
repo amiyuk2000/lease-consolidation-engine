@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Warm off-white canvas, near-black ink, one deep green accent.
+ * Display type is a serif for headlines; everything else is a neutral sans.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-serif), ui-serif, Georgia, serif;
+
+  --color-canvas: #f6f4ef;
+  --color-canvas-deep: #ece8df;
+  --color-ink: #141412;
+  --color-ink-soft: #3d3b37;
+  --color-night: #121211;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+::selection {
+  background: #d8e8df;
+}
