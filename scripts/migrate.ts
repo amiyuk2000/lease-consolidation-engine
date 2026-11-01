@@ -60,6 +60,9 @@ async function main() {
   // Neon on Vercel provides a direct (unpooled) URL; migrations are safest over a direct connection.
   const url = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL;
   const dir = process.env.PGLITE_DIR ?? "./.pglite";
+  if (!url && process.env.VERCEL) {
+    throw new Error("DATABASE_URL is not set. In Vercel, open Storage, create a Neon Postgres database, connect it to this project, then redeploy.");
+  }
   if (url) {
     await migrateRemote(url);
   } else if (process.argv.includes(ATTEMPT_FLAG)) {
