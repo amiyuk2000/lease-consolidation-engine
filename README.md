@@ -2,7 +2,7 @@
 
 **Know which office space you can actually give back.**
 
-A decision tool for corporate real estate and workplace leads. It models what happens to a multi-site office portfolio under seven consolidation strategies, ranks every option against the cost of doing nothing, and says plainly when the leases don't allow an option.
+A decision tool for corporate real estate and workplace leads. It models what happens to a multi-site office portfolio under seven consolidation strategies, ranks every option against the cost of doing nothing, and says plainly when the leases don't allow an option. For every option, it also shows what the resulting workplace would be like for the people who work there.
 
 ### [▶ Try the live demo](https://lease-consolidation-engine.vercel.app)
 
@@ -22,7 +22,9 @@ The questions that decide whether money is actually saved are harder:
 2. **What does acting cost?** Make-good, fit-out, moving, surrender premiums, double-running rent and fees.
 3. **Does it pay back** before the lease would have ended anyway?
 
-This app answers all three for every site, under every strategy.
+This app answers all three for every site, under every strategy. It then asks a fourth question that a spreadsheet usually leaves out:
+
+4. **What is the office like to come into afterwards?** A consolidation that saves money but leaves people without a desk mid-week, or without a quiet room, has a cost that a cash flow doesn't show.
 
 ## What it does
 
@@ -34,7 +36,7 @@ This app answers all three for every site, under every strategy.
 | **Compares against doing nothing** | A baseline that escalates net and additional rent separately and renews each lease at market rent. Savings are never measured against today's rent. |
 | **Ranks every option** | All seven strategies at every site, ranked by NPV, with payback, one-time cost and space released. |
 | **Says when an option is impossible** | A full receiving site, a missed break notice deadline or no exit mechanism produces a constraints report, not a misleading number. |
-| **Shows the workplace each option leaves behind** | An employee experience scorecard for every site an option changes, today and after: room on the busiest day, space to focus, confidential meetings, variety and choice, an office with a purpose, and busy versus quiet days. The targets are your own workplace brief. |
+| **Shows the workplace each option leaves behind** | An employee experience scorecard for every site an option changes, today and after, scored against your own workplace brief. [More below.](#feature-workplace-experience-after-each-option) |
 
 **The seven strategies:** densify in place · partial surrender at expiry · partial surrender mid-term · sublet surplus · close and absorb · blend and extend · relocate and consolidate.
 
@@ -43,6 +45,38 @@ This app answers all three for every site, under every strategy.
 ![Ranked options](docs/screenshots/ranked-options.png)
 
 ![Full analysis of one option](docs/screenshots/analysis.png)
+
+## Feature: workplace experience after each option
+
+Every option now comes with an employee experience scorecard for each workplace it changes. The scorecard shows the office as it is today and as it would be once the change is made, both scored against the organization's own workplace brief.
+
+| Indicator | The question it answers | How it is measured |
+|---|---|---|
+| **Room on the busiest day** | Is there enough space for everyone who comes in mid-week? | Workstations against peak occupants |
+| **Space to focus** | Is there somewhere quiet to focus? | Peak occupants per focus room |
+| **Confidential meetings** | Can I hold a confidential meeting? | Peak occupants per enclosed confidential room |
+| **Variety and choice** | Is there more than one type of space to choose from? | How many of four space types exist: focus, confidential, collaboration, social |
+| **An office with a purpose** | Does the office support each kind of work my team comes in for? | Each purpose in the brief has at least one space of its type |
+| **Busy and quiet days** | Is the office very different on a Monday or Friday from a Wednesday? | Busiest-day fullness minus quietest-day fullness, against workstations |
+
+**Where it appears:**
+
+- **Portfolio page:** a "Workplace experience today" card scores every site and holds the workplace brief, which you can edit.
+- **Ranked options:** each option shows the change for each workplace it affects, for example *Bay Street Tower: Meets 5 of 6 → Meets 3 of 6*. It expands to the full scorecard.
+- **Full analysis:** a "Workplace experience after the change" card shows each indicator today and after.
+
+**An example from the sample portfolio:** closing King West into Bay Street saves money, but Bay Street goes from 143 to 175 people on its busiest day. It ends up 6 focus rooms and 1 confidential room short, and the gap between its busiest and quietest days grows from 40 to 47 points. The scorecard drops from 5 of 6 to 3 of 6. That is the trade-off the option asks a workplace lead to accept, or to fix with part of the saving.
+
+![Workplace experience today, for every site](docs/screenshots/experience-today.png)
+
+![Workplace experience after closing King West into Bay Street](docs/screenshots/experience-after.png)
+
+**How it stays honest:**
+
+- **The targets are yours.** The workplace brief sets every target, and a target left blank is not scored.
+- **Unknown is never zero.** Each site's space mix (workstations, focus, confidential, collaboration and social spaces, and quietest-day attendance) is optional. A blank field shows as unknown.
+- **Assumptions are labelled.** When space is given back, each type of space is assumed to shrink with the area kept, and the scorecard says so. A site being densified keeps today's mix, flagged as changing with the fit-out. New premises stay unknown until a test-fit.
+- **It measures what the office provides, not how people feel.** That needs surveys, and the app does not estimate them.
 
 ## Domain traps it is built to catch
 
@@ -56,11 +90,12 @@ This app answers all three for every site, under every strategy.
 | Assuming a break option still works | Checks whether its notice deadline has passed |
 | Moving people into a site that is already full | Checks receiving capacity at the target density |
 | Filling missing market data with a guess | Shows "unknown" and cites the source of every market figure |
+| Judging a consolidation on cost alone | Scores the workplace each option leaves behind against your own brief |
 
 ## Data and honesty
 
 - **Market data is real and cited.** Market rents, vacancy and sublet share come from the [Cushman & Wakefield Canada Office MarketBeat, Q3 2026](https://www.cushmanwakefield.com/en/canada/insights/canada-marketbeats/office-marketbeats), each quoted from the source. Where the source publishes no rent for a building class, the engine returns "unknown" rather than estimating one.
-- **All lease data is invented.** The sample portfolio, its rents and its lease terms are made up for demonstration and labelled as sample data throughout the app.
+- **All lease data is invented.** The sample portfolio, its rents, its lease terms, its space mix and its workplace brief are made up for demonstration and labelled as sample data throughout the app.
 - **Defaults are labelled.** Every result lists its assumptions, and any value that came from a default rather than the user is marked as a default.
 - **All figures are CAD.**
 
@@ -120,5 +155,6 @@ This is a screening tool. Real decisions still need lease review, legal advice a
 
 - **Options are ranked one at a time.** The app doesn't yet search for the best combination of moves across the portfolio.
 - **Market data is thin:** national figures for a single quarter.
+- **The experience scorecard counts spaces; it does not survey people.** Room sizes, quality and location within a building are not modelled.
 - **Leases are entered by hand.** There is no import from Excel or lease administration systems.
 - **No export, no headcount forecasting, CAD only.**
