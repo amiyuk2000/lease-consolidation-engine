@@ -43,6 +43,15 @@ const LEASE_FIELDS: FieldSpec[] = [
   { name: "makeGoodPsf", label: "Make-good ($/sq ft)", type: "number", step: "0.01", hint: "Restoration cost at exit." },
 ];
 
+const WORKPLACE_FIELDS: FieldSpec[] = [
+  { name: "workstations", label: "Workstations", type: "number", hint: "Desks people can work at." },
+  { name: "focusRooms", label: "Focus rooms", type: "number", hint: "Quiet rooms or booths for individual work." },
+  { name: "confidentialRooms", label: "Confidential meeting rooms", type: "number", hint: "Enclosed rooms for private conversations." },
+  { name: "collaborationSpaces", label: "Collaboration spaces", type: "number", hint: "Team rooms and project areas." },
+  { name: "socialSpaces", label: "Social spaces", type: "number", hint: "Café, kitchen or lounge areas." },
+  { name: "quietestAttendancePct", label: "Quietest-day attendance (%)", type: "number", step: "0.1", hint: "Usually a Monday or Friday." },
+];
+
 /** The site fields. `idPrefix` keeps ids unique when an add form and an edit form are on the page together. */
 function SiteFields({ state, values, includeName, idPrefix }: { state: FormState; values: Record<string, string>; includeName: boolean; idPrefix: string }) {
   const value = (name: string) => state.values?.[name] ?? values[name] ?? "";
@@ -71,6 +80,14 @@ function SiteFields({ state, values, includeName, idPrefix }: { state: FormState
         </select>
       </Field>
       {LEASE_FIELDS.slice(1).map(input)}
+      <fieldset className="col-span-full mt-2 border-t border-stone-200 pt-4">
+        <legend className="sr-only">Workplace</legend>
+        <p className="text-sm font-medium text-ink">Workplace (optional)</p>
+        <p className="mb-4 mt-0.5 text-xs text-stone-500">
+          Feeds the employee experience scorecard. Leave a field blank if you don&apos;t know it: it shows as unknown, never as zero.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{WORKPLACE_FIELDS.map(input)}</div>
+      </fieldset>
     </div>
   );
 }

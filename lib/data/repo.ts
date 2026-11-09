@@ -15,8 +15,9 @@ import {
   sites,
   users,
 } from "@/lib/db/schema";
-import { SAMPLE_PORTFOLIO_NAME, SAMPLE_SITES } from "@/lib/db/sample-portfolio";
+import { SAMPLE_PORTFOLIO_NAME, SAMPLE_SITES, SAMPLE_STANDARDS } from "@/lib/db/sample-portfolio";
 import type { Benchmark, SiteInput } from "@/lib/engine";
+import type { ExperienceStandardsValues } from "@/lib/schemas/experience";
 import { referencedSiteIds, type ScenarioPayload } from "@/lib/schemas/scenario";
 import type { SiteFormValues, SiteUpdateValues } from "@/lib/schemas/site";
 
@@ -39,7 +40,7 @@ export async function provisionUser(
     await tx.insert(memberships).values({ organizationId: org.id, userId: u.id, role: "owner" });
     const [portfolio] = await tx
       .insert(portfolios)
-      .values({ organizationId: org.id, name: SAMPLE_PORTFOLIO_NAME, isSample: true })
+      .values({ organizationId: org.id, name: SAMPLE_PORTFOLIO_NAME, isSample: true, experienceStandards: SAMPLE_STANDARDS })
       .returning({ id: portfolios.id });
     if (!portfolio) throw new Error("Could not create sample portfolio");
     await tx.insert(sites).values(SAMPLE_SITES.map((s) => ({ ...s, organizationId: org.id, portfolioId: portfolio.id })));
@@ -71,6 +72,21 @@ export async function createPortfolio(db: Db, orgId: string, name: string) {
   return row;
 }
 
+/** Saves a portfolio's workplace brief. Returns false if the portfolio is not this organization's. */
+export async function updateExperienceStandards(
+  db: Db,
+  orgId: string,
+  portfolioId: string,
+  standards: ExperienceStandardsValues,
+): Promise<boolean> {
+  const rows = await db
+    .update(portfolios)
+    .set({ experienceStandards: standards })
+    .where(and(eq(portfolios.organizationId, orgId), eq(portfolios.id, portfolioId)))
+    .returning({ id: portfolios.id });
+  return rows.length === 1;
+}
+
 export async function deletePortfolio(db: Db, orgId: string, portfolioId: string) {
   await db.delete(portfolios).where(and(eq(portfolios.organizationId, orgId), eq(portfolios.id, portfolioId)));
 }
@@ -89,8 +105,7 @@ export async function createSite(db: Db, orgId: string, portfolioId: string, val
     .insert(sites)
     .values({
       ...values,
-      breakDate: values.breakDate ?? null,
-      breakNoticeMonths: values.breakNoticeMonths ?? null,
+      ...optionalSiteColumns(values),
       organizationId: orgId,
       portfolioId,
     })
@@ -103,10 +118,24 @@ export async function createSite(db: Db, orgId: string, portfolioId: string, val
 export async function updateSite(db: Db, orgId: string, siteId: string, values: SiteUpdateValues): Promise<boolean> {
   const rows = await db
     .update(sites)
-    .set({ ...values, breakDate: values.breakDate ?? null, breakNoticeMonths: values.breakNoticeMonths ?? null })
+    .set({ ...values, ...optionalSiteColumns(values) })
     .where(and(eq(sites.organizationId, orgId), eq(sites.id, siteId)))
     .returning({ id: sites.id });
   return rows.length === 1;
+}
+
+/** Blank optional fields are stored as null, so an edit can clear them. */
+function optionalSiteColumns(values: SiteUpdateValues) {
+  return {
+    breakDate: values.breakDate ?? null,
+    breakNoticeMonths: values.breakNoticeMonths ?? null,
+    workstations: values.workstations ?? null,
+    focusRooms: values.focusRooms ?? null,
+    confidentialRooms: values.confidentialRooms ?? null,
+    collaborationSpaces: values.collaborationSpaces ?? null,
+    socialSpaces: values.socialSpaces ?? null,
+    quietestAttendancePct: values.quietestAttendancePct ?? null,
+  };
 }
 
 export async function deleteSite(db: Db, orgId: string, siteId: string) {
@@ -177,6 +206,7 @@ export async function listBenchmarks(db: Db): Promise<Benchmark[]> {
 }
 
 export function toSiteInput(row: typeof sites.$inferSelect): SiteInput {
+  const spaceMix = [row.workstations, row.focusRooms, row.confidentialRooms, row.collaborationSpaces, row.socialSpaces];
   return {
     id: row.id,
     name: row.name,
@@ -195,6 +225,18 @@ export function toSiteInput(row: typeof sites.$inferSelect): SiteInput {
     breakDate: row.breakDate,
     breakNoticeMonths: row.breakNoticeMonths,
     makeGoodPsf: row.makeGoodPsf,
+    quietestAttendancePct: row.quietestAttendancePct,
+    ...(spaceMix.some((n) => n !== null)
+      ? {
+          spaceMix: {
+            workstations: row.workstations,
+            focusRooms: row.focusRooms,
+            confidentialRooms: row.confidentialRooms,
+            collaborationSpaces: row.collaborationSpaces,
+            socialSpaces: row.socialSpaces,
+          },
+        }
+      : {}),
   };
 }
 

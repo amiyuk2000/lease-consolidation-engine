@@ -7,7 +7,7 @@ async function addSite(page: Page, site: Record<string, string>) {
     await page.getByLabel(label, { exact: true }).fill(value);
   }
   await page.getByRole("button", { name: "Save site" }).click();
-  await expect(page.getByText(site["Site name"] ?? "", { exact: true })).toBeVisible();
+  await expect(page.getByText(site["Site name"] ?? "", { exact: true }).first()).toBeVisible();
 }
 
 const lease = {
@@ -97,4 +97,23 @@ test("the demo button opens a sample portfolio and a feasible scenario runs", as
   await expect(page.getByRole("heading", { name: "Constraints report" })).toBeVisible();
   await expect(page.getByText("NPV of saving vs baseline")).toBeVisible();
   await expect(page.getByText("Feasible", { exact: true })).toBeVisible();
+  // King West closes into Bay Street: 143 + 32 = 175 peak. Focus rooms, confidential rooms and the
+  // busy-to-quiet gap fall short of the sample brief, so Bay Street goes from 5 of 6 to 3 of 6.
+  await expect(page.getByRole("heading", { name: "Workplace experience after the change" })).toBeVisible();
+  await expect(page.getByText("Meets 5 of 6", { exact: true })).toBeVisible();
+  await expect(page.getByText("Meets 3 of 6", { exact: true })).toBeVisible();
+});
+
+test("the workplace brief can be changed, and the experience score follows", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Try the demo, no sign-up" }).click();
+  await expect(page.getByRole("heading", { name: "Workplace experience today" })).toBeVisible();
+  const bay = page.getByRole("row", { name: /Bay Street Tower/ }).last();
+  await expect(bay.getByText("Meets 5 of 6", { exact: true })).toBeVisible();
+  // Bay Street: 143 peak, 12 focus rooms. At 15 people per room it needs 10, so it now meets all six.
+  await page.getByText("Your workplace brief", { exact: true }).click();
+  await page.getByLabel("Peak occupants per focus room, at most").fill("15");
+  await page.getByRole("button", { name: "Save standards" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await expect(bay.getByText("Meets 6 of 6", { exact: true })).toBeVisible();
 });

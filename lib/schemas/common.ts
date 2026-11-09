@@ -31,6 +31,8 @@ export const optionalInt = (min: number, max: number) =>
 
 export const percentString = decimalString.refine((v) => Number(v) <= 100, "Must be 100 or less");
 
+export const optionalPercent = z.preprocess(blankToUndefined, percentString.optional());
+
 /** Issue list as { "path.to.field": message } for forms. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {
   const errors: Record<string, string> = {};

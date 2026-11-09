@@ -129,6 +129,24 @@ annual_cost(year)   = rentable_area × gross_rent_psf(year)
 - Payback is undiscounted, in months from the first month the cumulative position goes negative.
 - A break option is usable if the break date is before expiry and its notice deadline (break date minus notice months) has not passed.
 
+## Workplace experience
+
+Every option also reports the employee experience of the workplace it leaves behind: what it is like to come in once the change is made (`lib/engine/experience.ts`). Six indicators, scored against the portfolio's own workplace brief:
+
+- **Room on the busiest day** — workstations vs peak occupants
+- **Space to focus** — peak occupants per focus room
+- **Confidential meetings** — peak occupants per confidential room
+- **Variety and choice** — how many of four space types exist (focus, confidential, collaboration, social)
+- **An office with a purpose** — each purpose in the brief has at least one space of its type
+- **Busy and quiet days** — busiest-day fullness minus quietest-day fullness, against workstations
+
+Rules:
+
+- Do not quote or cite outside articles in the app or docs. Sq ft per peak occupant is shown, not scored. The targets are the user's brief.
+- A space-mix field left blank is unknown, never zero. A null target is not scored.
+- When space is given back, each count is assumed to shrink with the area kept, to the nearest whole space, and the output says it is an assumption. A densified site keeps today's mix, flagged as changing with the fit-out. New premises are unknown until a test-fit.
+- The scorecard measures what the workplace provides, not how people feel. Never estimate survey results.
+
 ## Constraints the engine must enforce
 
 Return these as a structured constraints report, never as a silent clamp:
@@ -146,8 +164,8 @@ Auth tables: `users` (email, name, password_hash, is_guest), `sessions` (hashed 
 
 - `organizations`
 - `memberships` (user, organization, role)
-- `portfolios` (organization_id)
-- `sites` (portfolio_id, name, city, segment, rentable_area, usable_area, headcount, peak_attendance_pct, net_rent_psf, additional_rent_psf, net_escalation_pct, additional_escalation_pct, lease_start, lease_expiry, break_date, break_notice_months, make_good_psf)
+- `portfolios` (organization_id, experience_standards jsonb: the workplace brief, null until set)
+- `sites` (portfolio_id, name, city, segment, rentable_area, usable_area, headcount, peak_attendance_pct, net_rent_psf, additional_rent_psf, net_escalation_pct, additional_escalation_pct, lease_start, lease_expiry, break_date, break_notice_months, make_good_psf, workstations, focus_rooms, confidential_rooms, collaboration_spaces, social_spaces, quietest_attendance_pct — the last six optional, null meaning not recorded)
 - `scenarios` (portfolio_id, type, horizon_years, discount_rate, target_density, effective_date, assumptions jsonb)
 - `scenario_sites` (scenario_id, site_id, action, receiving_site_id)
 - `benchmarks` (segment, market, period, vacancy_pct, net_rent_psf, sublet_share_pct, source, source_url)

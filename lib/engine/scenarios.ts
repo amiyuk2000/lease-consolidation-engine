@@ -88,6 +88,8 @@ export interface SiteDensity {
   siteId: string | null;
   name: string;
   peakOccupants: number;
+  /** Who works at the site after the change, by the site they came from. */
+  origins: ReadonlyArray<{ siteId: string; headcount: number }>;
   rentableArea: Decimal;
   areaPerPeakOccupant: Decimal | null;
 }
@@ -559,7 +561,12 @@ function closeAndAbsorb(
         receiver.id,
       );
     }
-    densities.push(density(receiver, after, rentable));
+    densities.push(
+      density(receiver, after, rentable, [
+        { siteId: receiver.id, headcount: receiver.headcount },
+        { siteId: site.id, headcount },
+      ]),
+    );
   }
 
   if (exit === null) return null;
@@ -679,9 +686,11 @@ function relocateAndConsolidate(
   const makeGoodItems: Array<{ month: number; amount: Decimal }> = [];
   let totalPeak = 0;
   let released = ZERO;
+  const exitSites: SiteInput[] = [];
   for (const e of exits) {
     const site = requireSite(draft, e.siteId);
     if (!site) continue;
+    exitSites.push(site);
     const exit = resolveExit(draft, site, e.exitMechanism);
     totalPeak += peakOccupants(site.headcount, site.peakAttendancePct);
     if (exit === null) continue;
@@ -751,6 +760,7 @@ function relocateAndConsolidate(
         siteId: null,
         name: lease.name,
         peakOccupants: totalPeak,
+        origins: exitSites.map((s) => ({ siteId: s.id, headcount: s.headcount })),
         rentableArea: newArea,
         areaPerPeakOccupant: areaPerPeakOccupant(newArea, totalPeak),
       },
@@ -894,8 +904,13 @@ function requireSite(draft: Draft, id: string): SiteInput | null {
   return site ?? null;
 }
 
-function density(site: SiteInput, peak: number, area: Decimal): SiteDensity {
-  return { siteId: site.id, name: site.name, peakOccupants: peak, rentableArea: area, areaPerPeakOccupant: areaPerPeakOccupant(area, peak) };
+function density(
+  site: SiteInput,
+  peak: number,
+  area: Decimal,
+  origins: SiteDensity["origins"] = [{ siteId: site.id, headcount: site.headcount }],
+): SiteDensity {
+  return { siteId: site.id, name: site.name, peakOccupants: peak, origins, rentableArea: area, areaPerPeakOccupant: areaPerPeakOccupant(area, peak) };
 }
 
 function warnIfBelowRequired(draft: Draft, site: SiteInput, retained: Decimal, required: Decimal) {

@@ -34,6 +34,7 @@ This app answers all three for every site, under every strategy.
 | **Compares against doing nothing** | A baseline that escalates net and additional rent separately and renews each lease at market rent. Savings are never measured against today's rent. |
 | **Ranks every option** | All seven strategies at every site, ranked by NPV, with payback, one-time cost and space released. |
 | **Says when an option is impossible** | A full receiving site, a missed break notice deadline or no exit mechanism produces a constraints report, not a misleading number. |
+| **Shows the workplace each option leaves behind** | An employee experience scorecard for every site an option changes, today and after: room on the busiest day, space to focus, confidential meetings, variety and choice, an office with a purpose, and busy versus quiet days. The targets are your own workplace brief. |
 
 **The seven strategies:** densify in place · partial surrender at expiry · partial surrender mid-term · sublet surplus · close and absorb · blend and extend · relocate and consolidate.
 
@@ -76,7 +77,7 @@ This app answers all three for every site, under every strategy.
 - **End-to-end tests drive a real browser:** sign up, build a portfolio, run close-and-absorb and read the constraints report; rank options and open one; edit a site; run a scenario from the demo.
 
 ```
-75 unit tests (engine, ranking, data isolation, auth) · 4 end-to-end browser tests
+94 unit tests (engine, ranking, experience, data isolation, auth) · 5 end-to-end browser tests
 ```
 
 ## Run it locally

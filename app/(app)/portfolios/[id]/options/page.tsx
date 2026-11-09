@@ -1,12 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { saveOptionAction } from "@/app/actions/options";
+import { ExperienceNote, ExperienceScorecard, ScoreBadge } from "@/components/experience";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Field, SampleDataNotice, SectionTitle, buttonClass, inputClass } from "@/components/ui";
 import { requireContext } from "@/lib/auth/session";
 import { getPortfolio, listBenchmarks, listSites, toSiteInput } from "@/lib/data/repo";
 import { db } from "@/lib/db";
-import { rankOptions, type Decimal, type Payback, type RankedOption } from "@/lib/engine";
+import {
+  experienceAfter,
+  experienceToday,
+  rankOptions,
+  type Decimal,
+  type ExperienceStandards,
+  type Payback,
+  type RankedOption,
+  type SiteInput,
+  type WorkplaceExperience,
+} from "@/lib/engine";
+import { parseStoredStandards, toEngineStandards } from "@/lib/schemas/experience";
 import { fieldErrors } from "@/lib/schemas/common";
 import { OPTIONAL_RATE_FIELDS, RATE_FIELDS, RATE_GROUPS, SAMPLE_RATES, optionRatesSchema, type RateField } from "@/lib/schemas/options";
 import { money, months, sqft } from "@/lib/format";
@@ -51,19 +63,24 @@ export default async function OptionsPage({
   const parsed = submitted || usingSampleRates ? optionRatesSchema.safeParse(raw) : null;
   const errors = parsed && !parsed.success ? fieldErrors(parsed.error) : {};
 
+  const standards = toEngineStandards(parseStoredStandards(portfolio.experienceStandards));
   let options: ReturnType<typeof rankOptions> | null = null;
+  let sites: SiteInput[] = [];
   if (parsed?.success) {
     const [siteRows, benchmarks] = await Promise.all([listSites(db, organization.id, id), listBenchmarks(db)]);
     const rates = parsed.data;
+    sites = siteRows.map(toSiteInput);
     options = rankOptions({
       valuationDate: todayIso(),
-      sites: siteRows.map(toSiteInput),
+      sites,
       benchmarks,
       rates,
       ...(rates.horizonYears !== undefined ? { horizonYears: rates.horizonYears } : {}),
       ...(rates.discountRatePct !== undefined ? { discountRatePct: rates.discountRatePct } : {}),
     });
   }
+
+  const today = new Map(sites.map((s) => [s.id, experienceToday(s, standards)]));
 
   return (
     <div className="space-y-6">
@@ -136,10 +153,19 @@ export default async function OptionsPage({
             ) : (
               <ol className="space-y-3">
                 {options.ranked.map((option, i) => (
-                  <OptionRow key={option.key} rank={i + 1} option={option} action={saveOptionAction.bind(null, id, raw, option.key)} />
+                  <OptionRow
+                    key={option.key}
+                    rank={i + 1}
+                    option={option}
+                    experience={workplacesAfter(option, sites, standards, today)}
+                    action={saveOptionAction.bind(null, id, raw, option.key)}
+                  />
                 ))}
               </ol>
             )}
+            <div className="mt-5">
+              <ExperienceNote />
+            </div>
           </Card>
 
           <Card>
@@ -173,7 +199,31 @@ export default async function OptionsPage({
   );
 }
 
-function OptionRow({ rank, option, action }: { rank: number; option: RankedOption; action: () => Promise<void> }) {
+type Workplaces = Array<{ after: WorkplaceExperience; before: WorkplaceExperience | undefined }>;
+
+function workplacesAfter(
+  option: RankedOption,
+  sites: SiteInput[],
+  standards: ExperienceStandards,
+  today: ReadonlyMap<string, WorkplaceExperience>,
+): Workplaces {
+  return experienceAfter(option.result, sites, standards).map((after) => ({
+    after,
+    before: after.siteId === null ? undefined : today.get(after.siteId),
+  }));
+}
+
+function OptionRow({
+  rank,
+  option,
+  experience,
+  action,
+}: {
+  rank: number;
+  option: RankedOption;
+  experience: Workplaces;
+  action: () => Promise<void>;
+}) {
   const f = option.result.financials;
   const warnings = option.result.constraints.filter((c) => c.severity === "warning");
   const cumulative = f?.years.at(-1)?.cumulativeDelta ?? null;
@@ -214,6 +264,32 @@ function OptionRow({ rank, option, action }: { rank: number; option: RankedOptio
         <Metric label="Cumulative saving" value={money(cumulative)} sign={cumulative} />
         <Metric label="Area released" value={sqft(option.result.space?.areaReleased)} />
       </dl>
+      {experience.length > 0 ? (
+        <details className="mt-3 border-t border-stone-100 pt-3">
+          <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="text-xs uppercase tracking-wide text-stone-500">Workplace after</span>
+            {experience.map(({ after, before }) => (
+              <span key={after.siteId ?? after.name} className="flex flex-wrap items-center gap-1.5">
+                <span className="text-stone-700">{after.name}</span>
+                {before ? (
+                  <>
+                    <ScoreBadge w={before} />
+                    <span aria-hidden className="text-stone-400">
+                      →
+                    </span>
+                  </>
+                ) : null}
+                <ScoreBadge w={after} />
+              </span>
+            ))}
+          </summary>
+          <div className="mt-3 space-y-3">
+            {experience.map(({ after, before }) => (
+              <ExperienceScorecard key={after.siteId ?? after.name} after={after} before={before} />
+            ))}
+          </div>
+        </details>
+      ) : null}
     </li>
   );
 }

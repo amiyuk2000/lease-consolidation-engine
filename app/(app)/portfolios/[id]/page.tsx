@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fragment } from "react";
 import { deletePortfolioAction, deleteSiteAction } from "@/app/actions/portfolio";
+import { ExperienceNote, ExperienceScorecard, INDICATORS, ScoreBadge, StatusBadge } from "@/components/experience";
+import { ExperienceStandardsForm } from "@/components/experience-forms";
 import { EditSiteForm, NewSiteForm } from "@/components/portfolio-forms";
 import type { sites } from "@/lib/db/schema";
 import { SubmitButton } from "@/components/submit-button";
@@ -9,7 +11,8 @@ import { Badge, Card, SampleDataNotice, SectionTitle, buttonClass } from "@/comp
 import { requireContext } from "@/lib/auth/session";
 import { getPortfolio, listScenarios, listSites, toSiteInput } from "@/lib/data/repo";
 import { db } from "@/lib/db";
-import { areaPerPeakOccupant, dec, grossRentPsf, leaseTiming, peakOccupants } from "@/lib/engine";
+import { INDICATOR_KEYS, areaPerPeakOccupant, dec, experienceToday, grossRentPsf, leaseTiming, peakOccupants } from "@/lib/engine";
+import { parseStoredStandards, toEngineStandards, type ExperienceStandardsValues } from "@/lib/schemas/experience";
 import { money, number, psf, sqft } from "@/lib/format";
 import { SCENARIO_LABELS } from "@/lib/schemas/scenario";
 import { isUuid, todayIso } from "@/lib/today";
@@ -30,8 +33,28 @@ function editableValues(row: typeof sites.$inferSelect): Record<string, string> 
     leaseStart: row.leaseStart,
     leaseExpiry: row.leaseExpiry,
     breakDate: row.breakDate ?? "",
-    breakNoticeMonths: row.breakNoticeMonths === null ? "" : String(row.breakNoticeMonths),
+    breakNoticeMonths: optional(row.breakNoticeMonths),
     makeGoodPsf: row.makeGoodPsf,
+    workstations: optional(row.workstations),
+    focusRooms: optional(row.focusRooms),
+    confidentialRooms: optional(row.confidentialRooms),
+    collaborationSpaces: optional(row.collaborationSpaces),
+    socialSpaces: optional(row.socialSpaces),
+    quietestAttendancePct: row.quietestAttendancePct ?? "",
+  };
+}
+
+const optional = (n: number | null) => (n === null ? "" : String(n));
+
+function standardsFormValues(v: ExperienceStandardsValues | null): Record<string, string> {
+  if (!v) return {};
+  return {
+    minSeatsPerPeakOccupant: v.minSeatsPerPeakOccupant ?? "",
+    maxPeoplePerFocusRoom: v.maxPeoplePerFocusRoom ?? "",
+    maxPeoplePerConfidentialRoom: v.maxPeoplePerConfidentialRoom ?? "",
+    minSpaceTypes: v.minSpaceTypes === undefined ? "" : String(v.minSpaceTypes),
+    maxBusyQuietGapPts: v.maxBusyQuietGapPts ?? "",
+    purposes: v.purposes.join(","),
   };
 }
 
@@ -51,13 +74,23 @@ export default async function PortfolioPage({
   if (!portfolio) notFound();
   const [siteRows, scenarioRows] = await Promise.all([listSites(db, organization.id, id), listScenarios(db, organization.id, id)]);
   const today = todayIso();
+  const storedStandards = parseStoredStandards(portfolio.experienceStandards);
+  const standards = toEngineStandards(storedStandards);
 
   const rows = siteRows.map((row) => {
     const site = toSiteInput(row);
     const peak = peakOccupants(site.headcount, site.peakAttendancePct);
     const timing = leaseTiming(site, today);
     const gross = grossRentPsf(site.netRentPsf, site.additionalRentPsf);
-    return { row, peak, timing, gross, perOccupant: areaPerPeakOccupant(site.rentableArea, peak), annual: gross.times(site.rentableArea) };
+    return {
+      row,
+      peak,
+      timing,
+      gross,
+      perOccupant: areaPerPeakOccupant(site.rentableArea, peak),
+      annual: gross.times(site.rentableArea),
+      experience: experienceToday(site, standards),
+    };
   });
   const totals = rows.reduce(
     (acc, r) => ({ area: acc.area.plus(r.row.rentableArea), headcount: acc.headcount + r.row.headcount, peak: acc.peak + r.peak, annual: acc.annual.plus(r.annual) }),
@@ -195,6 +228,70 @@ export default async function PortfolioPage({
             </Link>
           ) : null}
           <NewSiteForm portfolioId={id} />
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle hint="What it is like to come into each office now, scored against your workplace brief. Every ranked option shows how it would change this.">
+          Workplace experience today
+        </SectionTitle>
+        {portfolio.isSample ? (
+          <p className="mb-5 rounded-2xl bg-amber-50 px-5 py-3 text-sm text-amber-900">
+            <strong className="font-medium">Sample standards and space mix (invented).</strong> Change the brief below, or a site&apos;s
+            workplace fields under Edit, and every score updates.
+          </p>
+        ) : null}
+        {rows.length > 0 ? (
+          <div className="-mx-5 overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-200 text-left text-xs uppercase tracking-wide text-stone-500">
+                  <th className="px-5 py-2 font-medium">Site</th>
+                  {INDICATOR_KEYS.map((k) => (
+                    <th key={k} className="px-3 py-2 font-medium">
+                      {INDICATORS[k].label}
+                    </th>
+                  ))}
+                  <th className="px-3 py-2 font-medium">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(({ row, experience }) => (
+                  <tr key={row.id} className="border-b border-stone-100">
+                    <td className="px-5 py-3 font-medium text-ink">{row.name}</td>
+                    {experience.indicators.map((i) => (
+                      <td key={i.key} className="px-3 py-3" title={i.detail}>
+                        <StatusBadge status={i.status} />
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <ScoreBadge w={experience} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {rows.length > 0 ? (
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm font-medium text-ink">Show the detail for each site</summary>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              {rows.map(({ row, experience }) => (
+                <ExperienceScorecard key={row.id} after={experience} />
+              ))}
+            </div>
+          </details>
+        ) : null}
+        <details className="mt-6 rounded-2xl border border-stone-200 bg-canvas p-5" open={storedStandards === null}>
+          <summary className="cursor-pointer font-display text-xl text-ink">Your workplace brief</summary>
+          <p className="mb-4 mt-1 text-sm text-stone-500">
+            The targets each workplace is scored against. Leave a target blank and it is not scored.
+          </p>
+          <ExperienceStandardsForm portfolioId={id} values={standardsFormValues(storedStandards)} />
+        </details>
+        <div className="mt-4">
+          <ExperienceNote />
         </div>
       </Card>
 

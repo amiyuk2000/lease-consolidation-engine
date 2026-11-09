@@ -12,10 +12,12 @@ import {
   deletePortfolio,
   deleteScenario,
   deleteSite,
+  updateExperienceStandards,
   updateSite,
 } from "@/lib/data/repo";
 import { db } from "@/lib/db";
 import { fieldErrors } from "@/lib/schemas/common";
+import { STANDARD_FIELDS, experienceStandardsSchema } from "@/lib/schemas/experience";
 import { scenarioSchema } from "@/lib/schemas/scenario";
 import { siteFieldNames, siteSchema, siteUpdateFieldNames, siteUpdateSchema } from "@/lib/schemas/site";
 import { isUuid, todayIso } from "@/lib/today";
@@ -64,6 +66,21 @@ export async function updateSiteAction(portfolioId: string, siteId: string, _pre
   }
   revalidatePath(`/portfolios/${portfolioId}`);
   redirect(`/portfolios/${portfolioId}`);
+}
+
+/** Saves the portfolio's workplace brief, which the experience scorecard measures against. */
+export async function saveStandardsAction(portfolioId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const { organization } = await requireContext();
+  const raw = Object.fromEntries(STANDARD_FIELDS.map((k) => [k, String(formData.get(k) ?? "")]));
+  const purposes = formData.getAll("purposes").map(String);
+  const values = { ...raw, purposes: purposes.join(",") };
+  const parsed = experienceStandardsSchema.safeParse({ ...raw, purposes });
+  if (!parsed.success) return { errors: fieldErrors(parsed.error), values };
+  if (!isUuid(portfolioId) || !(await updateExperienceStandards(db, organization.id, portfolioId, parsed.data))) {
+    return { errors: { _form: "Portfolio not found" }, values };
+  }
+  revalidatePath(`/portfolios/${portfolioId}`);
+  return { values: { ...values, _saved: "1" } };
 }
 
 export async function deleteSiteAction(portfolioId: string, siteId: string): Promise<void> {

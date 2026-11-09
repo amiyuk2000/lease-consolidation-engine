@@ -1,9 +1,20 @@
 // INVENTED SAMPLE DATA. Not real client leases. The UI labels this portfolio as sample data.
+import type { ExperienceStandardsValues } from "@/lib/schemas/experience";
 import type { sites } from "./schema";
 
 type SampleSite = Omit<typeof sites.$inferInsert, "id" | "organizationId" | "portfolioId" | "createdAt">;
 
 export const SAMPLE_PORTFOLIO_NAME = "Sample portfolio (invented data)";
+
+/** An invented workplace brief, so the demo shows a scored experience. */
+export const SAMPLE_STANDARDS: ExperienceStandardsValues = {
+  minSeatsPerPeakOccupant: "1",
+  maxPeoplePerFocusRoom: "10",
+  maxPeoplePerConfidentialRoom: "25",
+  minSpaceTypes: 4,
+  purposes: ["focus", "confidential", "collaboration", "socialising"],
+  maxBusyQuietGapPts: "40",
+};
 
 export const SAMPLE_SITES: SampleSite[] = [
   {
@@ -23,6 +34,12 @@ export const SAMPLE_SITES: SampleSite[] = [
     breakDate: "2027-12-31",
     breakNoticeMonths: 12,
     makeGoodPsf: "15.00",
+    workstations: 230,
+    focusRooms: 12,
+    confidentialRooms: 6,
+    collaborationSpaces: 8,
+    socialSpaces: 2,
+    quietestAttendancePct: "20",
   },
   {
     name: "Mississauga Campus (sample)",
@@ -42,6 +59,12 @@ export const SAMPLE_SITES: SampleSite[] = [
     breakDate: null,
     breakNoticeMonths: null,
     makeGoodPsf: "12.00",
+    workstations: 140,
+    focusRooms: 6,
+    confidentialRooms: 3,
+    collaborationSpaces: 5,
+    socialSpaces: 1,
+    quietestAttendancePct: "15",
   },
   {
     name: "Ottawa Centre (sample)",
@@ -60,6 +83,12 @@ export const SAMPLE_SITES: SampleSite[] = [
     breakDate: null,
     breakNoticeMonths: null,
     makeGoodPsf: "14.00",
+    workstations: 80,
+    focusRooms: 3,
+    confidentialRooms: 2,
+    collaborationSpaces: 3,
+    socialSpaces: 0,
+    quietestAttendancePct: "25",
   },
   {
     name: "King West Studio (sample)",
@@ -78,5 +107,11 @@ export const SAMPLE_SITES: SampleSite[] = [
     breakDate: "2028-06-30",
     breakNoticeMonths: 9,
     makeGoodPsf: "18.00",
+    workstations: 50,
+    focusRooms: 4,
+    confidentialRooms: 2,
+    collaborationSpaces: 3,
+    socialSpaces: 1,
+    quietestAttendancePct: "30",
   },
 ];

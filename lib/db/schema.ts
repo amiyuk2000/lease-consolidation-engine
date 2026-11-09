@@ -76,6 +76,8 @@ export const portfolios = pgTable(
     name: text("name").notNull(),
     /** Invented sample data; the UI labels it as such. */
     isSample: boolean("is_sample").notNull().default(false),
+    /** The workplace brief the experience scorecard measures against; validated by lib/schemas/experience.ts. Null until set. */
+    experienceStandards: jsonb("experience_standards"),
     createdAt: createdAt(),
   },
   (t) => [index("portfolios_org_idx").on(t.organizationId)],
@@ -105,6 +107,13 @@ export const sites = pgTable(
     breakDate: date("break_date"),
     breakNoticeMonths: integer("break_notice_months"),
     makeGoodPsf: money("make_good_psf").notNull(),
+    // Workplace inventory for the experience scorecard. Null means not recorded, shown as unknown.
+    workstations: integer("workstations"),
+    focusRooms: integer("focus_rooms"),
+    confidentialRooms: integer("confidential_rooms"),
+    collaborationSpaces: integer("collaboration_spaces"),
+    socialSpaces: integer("social_spaces"),
+    quietestAttendancePct: pct("quietest_attendance_pct"),
     createdAt: createdAt(),
   },
   (t) => [index("sites_org_idx").on(t.organizationId), index("sites_portfolio_idx").on(t.portfolioId)],

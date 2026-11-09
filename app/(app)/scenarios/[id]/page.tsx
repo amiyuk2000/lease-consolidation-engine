@@ -2,14 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { deleteScenarioAction } from "@/app/actions/portfolio";
+import { ExperienceNote, ExperienceScorecard } from "@/components/experience";
 import { AnnualCostChart, CumulativeChart, type ChartRow } from "@/components/results-charts";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, SampleDataNotice, SectionTitle, Stat, buttonClass } from "@/components/ui";
 import { requireContext } from "@/lib/auth/session";
 import { getPortfolio, getScenario, listBenchmarks, listSites, toSiteInput } from "@/lib/data/repo";
 import { db } from "@/lib/db";
-import { evaluateScenario, type Constraint, type Decimal, type Payback, type ScenarioResult } from "@/lib/engine";
+import { evaluateScenario, experienceAfter, experienceToday, type Constraint, type Decimal, type Payback, type ScenarioResult } from "@/lib/engine";
 import { chartValue, money, months, number, sqft } from "@/lib/format";
+import { parseStoredStandards, toEngineStandards } from "@/lib/schemas/experience";
 import { SCENARIO_LABELS, scenarioSchema, toEngineInput } from "@/lib/schemas/scenario";
 import { isUuid } from "@/lib/today";
 
@@ -30,9 +32,12 @@ export default async function ScenarioPage({ params }: { params: Promise<{ id: s
   if (!payload.success) {
     return <p className="text-rose-700">This scenario&apos;s saved inputs are no longer valid. Delete it and model it again.</p>;
   }
-  const result = evaluateScenario(toEngineInput(payload.data, scenario.valuationDate), {
-    sites: siteRows.map(toSiteInput),
-    benchmarks,
+  const sites = siteRows.map(toSiteInput);
+  const result = evaluateScenario(toEngineInput(payload.data, scenario.valuationDate), { sites, benchmarks });
+  const standards = toEngineStandards(parseStoredStandards(portfolio.experienceStandards));
+  const workplaces = experienceAfter(result, sites, standards).map((after) => {
+    const site = after.siteId === null ? undefined : sites.find((s) => s.id === after.siteId);
+    return { after, before: site ? experienceToday(site, standards) : undefined };
   });
   const f = result.financials;
   const horizon = result.baseline.annualCost.length;
@@ -202,6 +207,25 @@ export default async function ScenarioPage({ params }: { params: Promise<{ id: s
             ) : null}
           </Card>
         </div>
+      ) : null}
+
+      {workplaces.length > 0 ? (
+        <Card>
+          <SectionTitle hint="What employees would experience in each workplace this scenario changes, once the change is made, against your workplace brief.">
+            Workplace experience after the change
+          </SectionTitle>
+          <div className="space-y-3">
+            {workplaces.map(({ after, before }) => (
+              <ExperienceScorecard key={after.siteId ?? after.name} after={after} before={before} />
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-3">
+            <ExperienceNote />
+            <Link href={`/portfolios/${portfolio.id}`} className={buttonClass.link}>
+              Edit the workplace brief
+            </Link>
+          </div>
+        </Card>
       ) : null}
 
       <Card>

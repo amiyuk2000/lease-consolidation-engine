@@ -20,6 +20,19 @@ export interface SiteInput {
   breakDate: string | null;
   breakNoticeMonths: number | null;
   makeGoodPsf: DecimalValue;
+  /** Workplace inventory, for the experience scorecard. Null or absent fields are unknown, never assumed. */
+  spaceMix?: SpaceMix;
+  /** Quietest normal weekday, as a percentage of headcount. */
+  quietestAttendancePct?: DecimalValue | null;
+}
+
+export interface SpaceMix {
+  workstations: number | null;
+  focusRooms: number | null;
+  /** Enclosed rooms that can hold a confidential meeting. */
+  confidentialRooms: number | null;
+  collaborationSpaces: number | null;
+  socialSpaces: number | null;
 }
 
 /** A row from the benchmarks table. Every figure carries its source and period. */

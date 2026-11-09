@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SEGMENTS } from "@/lib/db/benchmark-data";
-import { decimalString, intField, isoDate, optionalInt, optionalIsoDate, percentString } from "./common";
+import { decimalString, intField, isoDate, optionalInt, optionalIsoDate, optionalPercent, percentString } from "./common";
 
 const leaseShape = {
   city: z.string().trim().min(1, "Enter a city").max(100),
@@ -18,6 +18,13 @@ const leaseShape = {
   breakDate: optionalIsoDate,
   breakNoticeMonths: optionalInt(0, 60),
   makeGoodPsf: decimalString,
+  // Workplace inventory. Optional: a blank is recorded as unknown, never as zero.
+  workstations: optionalInt(0, 100000),
+  focusRooms: optionalInt(0, 10000),
+  confidentialRooms: optionalInt(0, 10000),
+  collaborationSpaces: optionalInt(0, 10000),
+  socialSpaces: optionalInt(0, 10000),
+  quietestAttendancePct: optionalPercent,
 };
 
 type LeaseFields = {
@@ -27,6 +34,8 @@ type LeaseFields = {
   leaseExpiry: string;
   breakDate?: string | undefined;
   breakNoticeMonths?: number | undefined;
+  peakAttendancePct: string;
+  quietestAttendancePct?: string | undefined;
 };
 
 /** Cross-field checks shared by the create and edit schemas. */
@@ -44,6 +53,10 @@ function withLeaseChecks<T extends z.ZodType<LeaseFields>>(schema: T) {
     .refine((s) => s.breakDate === undefined || s.breakNoticeMonths !== undefined, {
       path: ["breakNoticeMonths"],
       message: "Enter the notice period for the break option",
+    })
+    .refine((s) => s.quietestAttendancePct === undefined || Number(s.quietestAttendancePct) <= Number(s.peakAttendancePct), {
+      path: ["quietestAttendancePct"],
+      message: "The quietest day cannot be busier than the peak",
     });
 }
 
